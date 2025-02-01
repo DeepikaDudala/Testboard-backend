@@ -45,7 +45,7 @@ const userLogin = AsyncHandler(async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       res.status(400);
-      throw new Error("Invalid email or password");
+      throw new Error("Invalid password");
     }
 
     res.status(200).json({
@@ -60,6 +60,37 @@ const userLogin = AsyncHandler(async (req, res) => {
   }
 });
 
+const setPassword = AsyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    res.status(400);
+    throw new Error("Please fill all fields");
+  }
+  if (password.length < 9 || password.length > 15) {
+    res.status(400);
+    throw new Error("Password must be between 9 and 15 characters");
+  }
+
+  try {
+    let user = await User.findOne({ email });
+    if (!user) {
+      res.status(400);
+      throw new Error("User not found");
+    }
+    user = await User.findOneAndUpdate(
+      { email }, { password }, { new: true })
+    res.status(200).json({
+      _id: user._id,
+      email: user.email,
+      role: user.role,
+      token: createToken(user.id),
+    });
+  } catch (err) {
+    res.status(400);
+    throw err;
+  }
+})
+
 const createToken = (id) => {
   const token = jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: "30d",
@@ -67,4 +98,4 @@ const createToken = (id) => {
   return token;
 };
 
-module.exports = { userLogin, userRegister };
+module.exports = { userLogin, userRegister, setPassword };

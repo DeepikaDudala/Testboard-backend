@@ -39,4 +39,20 @@ userSchema.pre("save", async function (next) {
   }
 });
 
+async function hashPassword(next) {
+  if (!this._update.password) return next();
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(this._update.password, salt);
+    this._update.password = hashedPassword;
+    return next();
+  } catch (err) {
+    return next(err);
+  }
+}
+
+userSchema.pre("findOneAndUpdate", hashPassword);
+userSchema.pre("update", hashPassword);
+
 module.exports = mongoose.model("User", userSchema);
